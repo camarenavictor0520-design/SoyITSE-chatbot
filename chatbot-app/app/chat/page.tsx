@@ -534,33 +534,39 @@ export default function ChatPage() {
         onLogout={handleLogout}
         onDelete={handleDeleteConversation}
       />
-      <div className="flex-1 flex flex-col">
-        <header className="flex items-center justify-between px-6 py-4 border-b border-ink-700">
+      <div
+        className="flex-1 flex flex-col relative bg-cover bg-center"
+        style={{ backgroundImage: "url(/campus-bg.jpg)" }}
+      >
+        <div className="absolute inset-0 bg-ink-950/85 pointer-events-none" />
+        <header className="relative flex items-center justify-between px-6 py-4 border-b border-ink-700/60 backdrop-blur-sm">
           <div className="flex items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.svg" alt="Logo" className="w-7 h-7" />
             <h1 className="font-display text-lg">SoyITSE</h1>
           </div>
         </header>
-        <ChatWindow
-          messages={messages}
-          loading={loading}
-          onSpeak={speak}
-          onEdit={handleEdit}
-        />
-        <div ref={bottomRef} />
-        <MessageInput
-          ref={inputRef}
-          onSend={handleSend}
-          disabled={false}
-          loading={loading}
-          onCancel={handleCancel}
-          conversationMode={conversationMode}
-          onToggleConversationMode={toggleConversationMode}
-          onListeningChange={setVoiceListening}
-          onInterrupt={interruptAssistant}
-          continuousMode={conversationMode}
-        />
+        <div className="relative flex-1 flex flex-col min-h-0">
+          <ChatWindow
+            messages={messages}
+            loading={loading}
+            onSpeak={speak}
+            onEdit={handleEdit}
+          />
+          <div ref={bottomRef} />
+          <MessageInput
+            ref={inputRef}
+            onSend={handleSend}
+            disabled={false}
+            loading={loading}
+            onCancel={handleCancel}
+            conversationMode={conversationMode}
+            onToggleConversationMode={toggleConversationMode}
+            onListeningChange={setVoiceListening}
+            onInterrupt={interruptAssistant}
+            continuousMode={conversationMode}
+          />
+        </div>
       </div>
     </div>
   );

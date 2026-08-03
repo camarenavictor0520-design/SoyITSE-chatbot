@@ -49,10 +49,10 @@ export default function ChatWindow({
             }`}
           >
             <div
-              className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+              className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed backdrop-blur-sm ${
                 m.role === "user"
-                  ? "bg-gold-500 text-ink-950"
-                  : "bg-ink-800 text-mist-100"
+                  ? "bg-gold-500/95 text-ink-950"
+                  : "bg-ink-900/60 border border-gold-400/30 text-mist-100"
               }`}
             >
               {m.image_url && IMAGE_EXT.test(m.image_url) && (
