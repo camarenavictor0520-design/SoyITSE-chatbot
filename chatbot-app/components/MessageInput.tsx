@@ -24,12 +24,6 @@ type Props = {
   conversationMode: boolean;
   onToggleConversationMode: () => void;
   onListeningChange?: (listening: boolean) => void;
-  // Se llama en cuanto detecta que la persona empezó a hablar — sirve para
-  // pausar de inmediato lo que el asistente esté diciendo (interrupción).
-  onInterrupt?: () => void;
-  // Verdadero mientras el modo conversación está activo: el micrófono se
-  // mantiene siempre encendido, reiniciándose solo tras cada intervención.
-  continuousMode: boolean;
 };
 
 const MessageInput = forwardRef<MessageInputHandle, Props>(function MessageInput(
@@ -41,8 +35,6 @@ const MessageInput = forwardRef<MessageInputHandle, Props>(function MessageInput
     conversationMode,
     onToggleConversationMode,
     onListeningChange,
-    onInterrupt,
-    continuousMode,
   },
   ref
 ) {
@@ -59,23 +51,10 @@ const MessageInput = forwardRef<MessageInputHandle, Props>(function MessageInput
   const onSendRef = useRef(onSend);
   const menuRef = useRef<HTMLDivElement>(null);
   const onListeningChangeRef = useRef(onListeningChange);
-  const onInterruptRef = useRef(onInterrupt);
-  const continuousModeRef = useRef(continuousMode);
-  // true cuando la persona apagó el micrófono a propósito — evita que el
-  // ciclo de "siempre encendido" lo vuelva a prender solo.
-  const manuallyStoppedRef = useRef(true);
 
   useEffect(() => {
     onListeningChangeRef.current = onListeningChange;
   }, [onListeningChange]);
-
-  useEffect(() => {
-    onInterruptRef.current = onInterrupt;
-  }, [onInterrupt]);
-
-  useEffect(() => {
-    continuousModeRef.current = continuousMode;
-  }, [continuousMode]);
 
   function setListening(v: boolean) {
     setListeningState(v);
@@ -123,12 +102,6 @@ const MessageInput = forwardRef<MessageInputHandle, Props>(function MessageInput
     recognition.continuous = false;
     recognition.interimResults = false;
 
-    // En cuanto detecta voz humana, interrumpe lo que el asistente esté
-    // diciendo — así se puede hablar por encima sin tocar nada.
-    recognition.onspeechstart = () => {
-      onInterruptRef.current?.();
-    };
-
     // Se envía una sola vez, directo desde el resultado final —
     // no se vuelve a disparar desde onend, para evitar respuestas dobles.
     recognition.onresult = (event: any) => {
@@ -146,22 +119,15 @@ const MessageInput = forwardRef<MessageInputHandle, Props>(function MessageInput
     };
     recognition.onend = () => {
       setListening(false);
-      // Modo conversación: el micrófono se reinicia solo, así se mantiene
-      // "siempre prendido" hasta que la persona lo apague a propósito.
-      if (continuousModeRef.current && !manuallyStoppedRef.current) {
-        setTimeout(() => toggleListening(true), 250);
-      }
     };
     recognition.onerror = (event: any) => {
       setListening(false);
       if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-        manuallyStoppedRef.current = true;
         alert(
           "El navegador bloqueó el micrófono. Haz clic en el candado 🔒 junto a la URL y permite el acceso al micrófono para este sitio, luego intenta de nuevo."
         );
       } else if (event.error === "no-speech" || event.error === "aborted") {
-        // Silencio o se detuvo a propósito; el propio onend se encarga de
-        // reiniciar si el modo continuo sigue activo.
+        // Silencio o se detuvo a propósito; no hace falta alertar.
       } else {
         alert("No se pudo usar el micrófono (" + event.error + "). Intenta de nuevo.");
       }
@@ -180,12 +146,10 @@ const MessageInput = forwardRef<MessageInputHandle, Props>(function MessageInput
     }
     const shouldListen = forceStart !== undefined ? forceStart : !listening;
     if (!shouldListen) {
-      manuallyStoppedRef.current = true;
       recognitionRef.current.stop();
       setListening(false);
     } else {
       if (listening) return;
-      manuallyStoppedRef.current = false;
       resultHandledRef.current = false;
       try {
         recognitionRef.current.start();

@@ -237,15 +237,6 @@ export default function ChatPage() {
     setSpeaking(false);
   }
 
-  // Se dispara en cuanto la persona empieza a hablar: corta lo que el
-  // asistente esté diciendo Y cancela la respuesta que estuviera generando,
-  // para que responda a lo nuevo que dijo al interrumpir.
-  function interruptAssistant() {
-    abortControllerRef.current?.abort();
-    setLoading(false);
-    stopSpeaking();
-  }
-
   // Voz principal: audio real generado por ElevenLabs (mucho más natural).
   // Si falla (sin clave, sin créditos, sin internet), cae automáticamente
   // a la voz del navegador para que la conversación no se corte.
@@ -349,13 +340,21 @@ export default function ChatPage() {
     });
   }
 
+  const WELCOME_MESSAGE =
+    "Bienvenido al asistente de inteligencia artificial de SoyITSE. ¿En qué puedo ayudarte hoy?";
+
   function toggleConversationMode() {
     setConversationMode((prev) => {
       const next = !prev;
       if (next) {
         setMuted(false);
-        // Empieza a escuchar de inmediato, como si contestaras el teléfono.
-        setTimeout(() => inputRef.current?.startListening(), 0);
+        // Saluda primero y, cuando termine, empieza a escuchar — como si
+        // contestaras el teléfono y la otra persona hablara primero.
+        speak(WELCOME_MESSAGE, () => {
+          if (conversationModeRef.current && !mutedRef.current) {
+            inputRef.current?.startListening();
+          }
+        });
       } else {
         stopSpeaking();
         inputRef.current?.stopListening();
@@ -495,7 +494,11 @@ export default function ChatPage() {
       setLoading(false);
 
       if (conversationModeRef.current) {
-        speak(reply);
+        speak(reply, () => {
+          if (conversationModeRef.current && !mutedRef.current) {
+            inputRef.current?.startListening();
+          }
+        });
       }
     } catch (err: any) {
       setLoading(false);
@@ -563,8 +566,6 @@ export default function ChatPage() {
             conversationMode={conversationMode}
             onToggleConversationMode={toggleConversationMode}
             onListeningChange={setVoiceListening}
-            onInterrupt={interruptAssistant}
-            continuousMode={conversationMode}
           />
         </div>
       </div>
