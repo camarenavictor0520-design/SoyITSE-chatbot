@@ -442,7 +442,18 @@ export default function ChatPage() {
       imageUrl = json.url || null;
     }
 
-    const { data: savedUserMsg } = await supabase
+    const userMessage: Message = {
+      role: "user",
+      content: text,
+      image_url: imageUrl,
+    };
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
+
+    // Guardar el mensaje en la base de datos y preguntarle a Claude corren
+    // AL MISMO TIEMPO — antes uno esperaba al otro, lo cual sumaba segundos
+    // muertos a cada respuesta.
+    const savePromise = supabase
       .from("messages")
       .insert({
         conversation_id: convId,
@@ -452,15 +463,6 @@ export default function ChatPage() {
       })
       .select()
       .single();
-
-    const userMessage: Message = {
-      id: savedUserMsg?.id,
-      role: "user",
-      content: text,
-      image_url: imageUrl,
-    };
-    const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
 
     try {
       const res = await fetch("/api/chat", {
@@ -475,6 +477,11 @@ export default function ChatPage() {
       });
       const json = await res.json();
       const reply = json.reply || "Lo siento, ocurrió un error al responder.";
+
+      const { data: savedUserMsg } = await savePromise;
+      setMessages((prev) =>
+        prev.map((m) => (m === userMessage ? { ...m, id: savedUserMsg?.id } : m))
+      );
 
       const { data: savedAssistantMsg } = await supabase
         .from("messages")
