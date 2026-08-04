@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-// Voces predeterminadas de ElevenLabs (disponibles en cualquier cuenta).
-const VOICE_IDS: Record<"male" | "female", string> = {
-  female: "21m00Tcm4TlvDq8ikWAM", // Rachel
-  male: "pNInz6obpgDQGcFmaJgB", // Adam
+// Voces predeterminadas de OpenAI TTS (disponibles en cualquier cuenta con
+// una API key de OpenAI, sin necesidad de configuración extra).
+const VOICE_NAMES: Record<"male" | "female", string> = {
+  female: "nova",
+  male: "onyx",
 };
 
 export async function POST(req: NextRequest) {
@@ -21,37 +22,33 @@ export async function POST(req: NextRequest) {
   if (!text || !text.trim()) {
     return NextResponse.json({ error: "Falta texto" }, { status: 400 });
   }
-  if (!process.env.ELEVENLABS_API_KEY) {
+  if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json(
-      { error: "Falta configurar ELEVENLABS_API_KEY" },
+      { error: "Falta configurar OPENAI_API_KEY" },
       { status: 500 }
     );
   }
 
-  const voiceId = VOICE_IDS[gender === "male" ? "male" : "female"];
+  const voice = VOICE_NAMES[gender === "male" ? "male" : "female"];
 
   try {
-    const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "xi-api-key": process.env.ELEVENLABS_API_KEY,
-        },
-        body: JSON.stringify({
-          text,
-          // Modelo multilingüe: detecta el idioma del texto automáticamente
-          // (español, inglés, mandarín, francés, árabe, hindi, portugués...).
-          model_id: "eleven_multilingual_v2",
-          voice_settings: { stability: 0.5, similarity_boost: 0.75 },
-        }),
-      }
-    );
+    const response = await fetch("https://api.openai.com/v1/audio/speech", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "tts-1",
+        voice,
+        input: text,
+        response_format: "mp3",
+      }),
+    });
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error("ElevenLabs error:", errText);
+      console.error("OpenAI TTS error:", errText);
       return NextResponse.json({ error: "Error al generar audio" }, { status: 500 });
     }
 
