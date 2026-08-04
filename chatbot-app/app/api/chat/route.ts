@@ -27,51 +27,28 @@ export async function POST(req: NextRequest) {
 
   const { messages, imageUrl, language } = await req.json();
   // messages: [{ role: 'user' | 'assistant', content: string }, ...]
-  // imageUrl: en realidad puede ser CUALQUIER archivo subido, no solo imágenes.
 
   const lastUserContent: any[] = [];
-  let fileNote = "";
   if (imageUrl) {
-    const fileResp = await fetch(imageUrl);
-    const mediaType = fileResp.headers.get("content-type") || "application/octet-stream";
-    const fileName = decodeURIComponent(imageUrl.split("/").pop() || "archivo");
-
-    if (mediaType.startsWith("image/")) {
-      const buffer = Buffer.from(await fileResp.arrayBuffer());
-      lastUserContent.push({
-        type: "image",
-        source: { type: "base64", media_type: mediaType, data: buffer.toString("base64") },
-      });
-    } else if (mediaType === "application/pdf") {
-      const buffer = Buffer.from(await fileResp.arrayBuffer());
-      lastUserContent.push({
-        type: "document",
-        source: { type: "base64", media_type: "application/pdf", data: buffer.toString("base64") },
-      });
-    } else if (
-      mediaType.startsWith("text/") ||
-      mediaType === "application/json" ||
-      mediaType === "application/csv"
-    ) {
-      const textContent = await fileResp.text();
-      lastUserContent.push({
-        type: "text",
-        text: `Contenido del archivo adjunto "${fileName}":\n\n${textContent.slice(0, 20000)}`,
-      });
-    } else {
-      // Tipo de archivo que no se puede leer directamente (ej. .docx, .xlsx,
-      // .zip) — se avisa al modelo para que no invente contenido.
-      fileNote = `\n\n[La persona adjuntó un archivo llamado "${fileName}" (${mediaType}) que no se pudo leer directamente. Pídele que copie el texto relevante o lo convierta a PDF, imagen o .txt si necesita que lo analices.]`;
-    }
+    const imgResp = await fetch(imageUrl);
+    const buffer = Buffer.from(await imgResp.arrayBuffer());
+    const mediaType = imgResp.headers.get("content-type") || "image/jpeg";
+    lastUserContent.push({
+      type: "image",
+      source: {
+        type: "base64",
+        media_type: mediaType,
+        data: buffer.toString("base64"),
+      },
+    });
   }
 
   const formatted = messages.map((m: any, i: number) => {
-    if (i === messages.length - 1 && m.role === "user") {
-      const text = m.content + fileNote;
-      if (lastUserContent.length) {
-        return { role: m.role, content: [...lastUserContent, { type: "text", text }] };
-      }
-      return { role: m.role, content: text };
+    if (i === messages.length - 1 && m.role === "user" && lastUserContent.length) {
+      return {
+        role: m.role,
+        content: [...lastUserContent, { type: "text", text: m.content }],
+      };
     }
     return { role: m.role, content: m.content };
   });

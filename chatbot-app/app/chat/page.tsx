@@ -340,21 +340,13 @@ export default function ChatPage() {
     });
   }
 
-  const WELCOME_MESSAGE =
-    "Bienvenido al asistente de inteligencia artificial de SoyITSE. ¿En qué puedo ayudarte hoy?";
-
   function toggleConversationMode() {
     setConversationMode((prev) => {
       const next = !prev;
       if (next) {
         setMuted(false);
-        // Saluda primero y, cuando termine, empieza a escuchar — como si
-        // contestaras el teléfono y la otra persona hablara primero.
-        speak(WELCOME_MESSAGE, () => {
-          if (conversationModeRef.current && !mutedRef.current) {
-            inputRef.current?.startListening();
-          }
-        });
+        // Empieza a escuchar de inmediato, como si contestaras el teléfono.
+        setTimeout(() => inputRef.current?.startListening(), 0);
       } else {
         stopSpeaking();
         inputRef.current?.stopListening();
@@ -510,14 +502,13 @@ export default function ChatPage() {
     }
   }
 
-  const voiceStatus: VoiceStatus =
-    loading && conversationMode
-      ? "thinking"
-      : speaking
-      ? "speaking"
-      : voiceListening
-      ? "listening"
-      : "idle";
+  const voiceStatus: VoiceStatus = voiceListening
+    ? "listening"
+    : loading && conversationMode
+    ? "thinking"
+    : speaking
+    ? "speaking"
+    : "idle";
 
   return (
     <div className="flex h-screen bg-ink-950 text-mist-100">
@@ -537,37 +528,32 @@ export default function ChatPage() {
         onLogout={handleLogout}
         onDelete={handleDeleteConversation}
       />
-      <div
-        className="flex-1 flex flex-col relative bg-cover bg-center"
-        style={{ backgroundImage: "url(/campus-bg.jpg)" }}
-      >
-        <div className="absolute inset-0 bg-ink-950/85 pointer-events-none" />
-        <header className="relative flex items-center justify-between px-6 py-4 border-b border-ink-700/60 backdrop-blur-sm">
+      <div className="flex-1 flex flex-col">
+        <header className="flex items-center justify-between px-6 py-4 border-b border-ink-700">
           <div className="flex items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.svg" alt="Logo" className="w-7 h-7" />
             <h1 className="font-display text-lg">SoyITSE</h1>
           </div>
         </header>
-        <div className="relative flex-1 flex flex-col min-h-0">
-          <ChatWindow
-            messages={messages}
-            loading={loading}
-            onSpeak={speak}
-            onEdit={handleEdit}
-          />
-          <div ref={bottomRef} />
-          <MessageInput
-            ref={inputRef}
-            onSend={handleSend}
-            disabled={false}
-            loading={loading}
-            onCancel={handleCancel}
-            conversationMode={conversationMode}
-            onToggleConversationMode={toggleConversationMode}
-            onListeningChange={setVoiceListening}
-          />
-        </div>
+        <ChatWindow
+          messages={messages}
+          loading={loading}
+          onSpeak={speak}
+          onEdit={handleEdit}
+        />
+        <div ref={bottomRef} />
+        <MessageInput
+          ref={inputRef}
+          onSend={handleSend}
+          disabled={false}
+          loading={loading}
+          onCancel={handleCancel}
+          conversationMode={conversationMode}
+          onToggleConversationMode={toggleConversationMode}
+          onListeningChange={setVoiceListening}
+          onBeforeListen={stopSpeaking}
+        />
       </div>
     </div>
   );
